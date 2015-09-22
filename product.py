@@ -111,6 +111,8 @@ class Product:
         This function is used for inventory checking purpose. It returns a
         boolean result on the basis of fields such as min_warehouse_quantity.
         """
+        # TODO: Currently this logic is redundant. This should have come
+        # from sale channel.
         quantity = self.get_availability().get('quantity')
 
         if self.type != 'goods':
@@ -134,6 +136,7 @@ class Product:
         """
         This method returns the inventory status for the given product which can
         have the following messages -:
+
           * Out Of Stock
           * In Stock
           * X <UOM> left
@@ -147,6 +150,8 @@ class Product:
         such as color scheming in template. The second element of the tuple is
         the message to show.
         """
+        # TODO: Currently this logic is redundant. This should have come
+        # from sale channel.
         if self.can_buy_from_eshop():
             status, message = 'in_stock', 'In stock'
         else:
@@ -239,6 +244,7 @@ class Product:
 
         :return: A dictionary with `quantity` and `forecast_quantity`
         """
+        # TODO: Deprecate this to work with channel.get_availability()
         context = {
             'locations': [request.nereid_website.stock_location.id],
             'stock_date_end': date.today() + relativedelta(days=7)
@@ -255,20 +261,12 @@ class Product:
     @route('/product-availability/<uri>')
     def availability(cls, uri):
         """
-        Returns the following information for a product:
+        Returns the availability for the product.
 
-        +-------------------+-----------------------------------------------+
-        | quantity          | Available readily to buy                      |
-        +-------------------+-----------------------------------------------+
-        | forecast_quantity | Forecasted quantity, if the site needs it     |
-        +-------------------+-----------------------------------------------+
+        To change how the availability is implemented, you should update the
+        `get_availability` methods in `sale.channel` or product listings.
 
-        .. note::
-            To modify the availability, or to send any additional information,
-            it is recommended to subclass the :py:meth:`~get_availability` and
-            implement your custom logic. For example, you might want to check
-            stock with your vendor for back orders or send a message like
-            `Only 5 pieces left`
+        .. versionchanged:: 3.4.3.0
 
         :param uri: URI of the product for which the availability needs to
                     be found
@@ -282,4 +280,6 @@ class Product:
         except ValueError:
             return abort(404)
 
-        return jsonify(product.get_availability())
+        return jsonify(
+            request.nereid_website.channel.get_availability(product)
+        )
